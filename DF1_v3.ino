@@ -7,7 +7,8 @@
 
 //Constant
 #define MAXNUMBERITERACALIBRA 1000 // Iteration to store parameter to aboid spurois peaks
-#define MAXUMBRAL 4000 //limit to trigger LED ON
+#define MAXUMBRALAC 3500 //limit to trigger LED ON by Ac force
+#define MAXUMBRALG 2000 //limit to trigger LED ON by giros force
 #define NUMBEROFTIMETOLEDON 10
 //#define DEBUG_TO_USB    // Controls if we are gonna show data by USB port
 #define DEBUG_TO_SD    // Controls if we are gonna store data in SD
@@ -43,7 +44,7 @@ void setup() {
     Serial.begin(9600); // initialize serial port to 9600 bps so you can see your debug messages in Arduino IDE via debug channel 
     Serial.println("Initial Calibration value");
     MPU6050_ShowtoUSB(AcX_Init, AcY_Init, AcZ_Init, Tmp_Init, GyX_Init, GyY_Init, GyZ_Init);
-    delay(5000);
+    //delay(5000);
   #endif
   #ifdef DEBUG_TO_SD
     // initialize the LED pin as an output:
@@ -120,12 +121,19 @@ void loop() {
 bool MPU6050_ProcessingData(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int16_t AcX_Init, 
 int16_t AcY_Init,int16_t AcZ_Init,int16_t Tmp_Init,int16_t GyX_Init,int16_t GyY_Init,int16_t GyZ_Init)
 {
-  if (abs(AcX - AcX_Init) >= MAXUMBRAL)
+  if (abs(AcX - AcX_Init) >= MAXUMBRALAC)
     return true;
-  else if (abs(AcY - AcY_Init) >= MAXUMBRAL)
+  else if (abs(AcY - AcY_Init) >= MAXUMBRALAC)
     return true;
-  else if (abs(AcZ - AcZ_Init) >= MAXUMBRAL)
+  else if (abs(AcZ - AcZ_Init) >= MAXUMBRALAC)
     return true;
+  else if (abs(GyX - GyX_Init) >= MAXUMBRALG)
+    return true;
+  else if (abs(GyZ - GyY_Init) >= MAXUMBRALG)
+    return true;
+  else if (abs(GyZ - GyZ_Init) >= MAXUMBRALG)
+    return true;
+  
  
   return false;
 }
@@ -154,7 +162,7 @@ void MPU6050_AcquiringData(int16_t *AcX_Init, int16_t *AcY_Init, int16_t *AcZ_In
       sprintf(cadena,"P = %f | AcX = %f | AcY = %f | AcZ = %f | TMP = %.2f | GyX = %f | GyY = %f | GyZ = %f", millis(), AcXTemp, AcYTemp, AcZTemp, TmpTemp/340.00+36.53, GyXTemp, GyYTemp, GyZTemp);    
       Serial.println("Data while for loop for storing whole data");
       Serial.println(cadena);
-      delay(10);
+      //delay(10);
      #endif
   }
   
@@ -176,7 +184,7 @@ void MPU6050_AcquiringData(int16_t *AcX_Init, int16_t *AcY_Init, int16_t *AcZ_In
   #ifdef DEBUG_TO_USB /* Y VISUALIZARLO POR EL PUERTO SERIE**/
     MPU6050_ShowtoUSB(*AcX_Init, *AcY_Init, *AcZ_Init, *Tmp_Init, *GyX_Init, *GyY_Init, *GyZ_Init);
     Serial.println("Data after divide by MAXNUMBERITERACALIBRA");
-    delay(1000);
+    //delay(1000);
   #endif
 }
 
@@ -223,7 +231,7 @@ void TriggerSTOP()
   for (int i=0; i<NUMBEROFTIMETOLEDON; i++)
   {
     digitalWrite(0, HIGH);   // turn the LED on (HIGH is the voltage level)
-    delay(100);
+    delay(150);
     digitalWrite(0, LOW);   // turn the LED on (HIGH is the voltage level)
     delay(100);
   }
