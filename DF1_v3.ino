@@ -6,10 +6,13 @@
 //MPU6050 MPU6050_1 = MPU6050(); // This will apply once MPU6050 is defined.
 
 //Constant
-#define MAXNUMBERITERACALIBRA 1000 // Iteration to store parameter to aboid spurois peaks
+#define MAXNUMBERITERACALIBRA 100 // Iteration to store parameter to aboid spurois peaks
 #define MAXUMBRALAC 3500 //limit to trigger LED ON by Ac force
-#define MAXUMBRALG 2000 //limit to trigger LED ON by giros force
-#define NUMBEROFTIMETOLEDON 10
+#define MAXUMBRALG 5000 //limit to trigger LED ON by giros force
+#define NUMBEROFTIMETOLEDONAc 10
+#define NUMBEROFTIMETOLEDONG 1
+#define TRIGGBYAc 0
+#define TRIGGBYG 1
 //#define DEBUG_TO_USB    // Controls if we are gonna show data by USB port
 #define DEBUG_TO_SD    // Controls if we are gonna store data in SD
 #include <SPI.h>
@@ -69,20 +72,31 @@ void setup() {
     dataFile.close();
   #endif
   pinMode(0, OUTPUT); // Activation PIN for triggering speaker
-  TriggerSTOP();
+  TriggerSTOP(TRIGGBYAc);
+  TriggerSTOP(TRIGGBYG);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   int16_t AcX=0,AcY=0,AcZ=0,Tmp=0,GyX=0,GyY=0,GyZ=0; // declare accellerometer and gyro variables TWO Bytes each
   char cadena[250];
-  bool LedOn = false;
+  int LedOn = -1;
 
   //MPU6050_ReadData(&AcX, &AcY, &AcZ, &Tmp, &GyX, &GyY, &GyZ);
   MPU6050_AcquiringData(&AcX, &AcY, &AcZ, &Tmp, &GyX, &GyY, &GyZ);
   LedOn = MPU6050_ProcessingData(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ, AcX_Init, AcY_Init, AcZ_Init, Tmp_Init, GyX_Init, GyY_Init, GyZ_Init);
-  if (LedOn)
-    TriggerSTOP(); 
+  //Update parameters value
+  AcX_Init = AcX;
+  AcY_Init = AcY;
+  AcZ_Init = AcZ;
+  Tmp_Init = Tmp;
+  GyX_Init = GyX;
+  GyY_Init = GyY;
+  GyZ_Init = GyZ;
+  if (LedOn == TRIGGBYAc)
+    TriggerSTOP(TRIGGBYAc); //trigger by Ac
+  else if (LedOn == TRIGGBYG)
+    TriggerSTOP(TRIGGBYG); //trigger by G
     
   #ifdef DEBUG_TO_USB /* Y VISUALIZARLO POR EL PUERTO SERIE**/
     MPU6050_ShowtoUSB(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ);
@@ -118,24 +132,23 @@ void loop() {
 }
 
 
-bool MPU6050_ProcessingData(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int16_t AcX_Init, 
+int MPU6050_ProcessingData(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int16_t AcX_Init, 
 int16_t AcY_Init,int16_t AcZ_Init,int16_t Tmp_Init,int16_t GyX_Init,int16_t GyY_Init,int16_t GyZ_Init)
 {
   if (abs(AcX - AcX_Init) >= MAXUMBRALAC)
-    return true;
+    return 0;
   else if (abs(AcY - AcY_Init) >= MAXUMBRALAC)
-    return true;
+    return 0;
   else if (abs(AcZ - AcZ_Init) >= MAXUMBRALAC)
-    return true;
+    return 0;
   else if (abs(GyX - GyX_Init) >= MAXUMBRALG)
-    return true;
+    return 1;
   else if (abs(GyZ - GyY_Init) >= MAXUMBRALG)
-    return true;
+    return 1;
   else if (abs(GyZ - GyZ_Init) >= MAXUMBRALG)
-    return true;
-  
- 
-  return false;
+    return 1;
+     
+  return -1;
 }
 
 //Reading accellerometer,gyroscope and temperature for a while or a number of time to avoid spureos interrution
@@ -226,14 +239,29 @@ bool MPU6050_ProcessingData()
 }
 
 //send signal to ON STOP
-void TriggerSTOP()
+void TriggerSTOP(int trigger)
 {
-  for (int i=0; i<NUMBEROFTIMETOLEDON; i++)
+  
+  if (trigger == TRIGGBYAc)
   {
-    digitalWrite(0, HIGH);   // turn the LED on (HIGH is the voltage level)
-    delay(150);
-    digitalWrite(0, LOW);   // turn the LED on (HIGH is the voltage level)
-    delay(100);
+    for (int i=0; i<NUMBEROFTIMETOLEDONAc; i++)
+    {
+      digitalWrite(0, HIGH);   // turn the LED on (HIGH is the voltage level)
+      delay(150);
+      digitalWrite(0, LOW);   // turn the LED on (HIGH is the voltage level)
+      delay(50);
+    }
+  }
+
+  if (trigger == TRIGGBYG)
+  {
+    for (int i=0; i<NUMBEROFTIMETOLEDONG; i++)
+    {
+      digitalWrite(0, HIGH);   // turn the LED on (HIGH is the voltage level)
+      delay(1000);
+      digitalWrite(0, LOW);   // turn the LED on (HIGH is the voltage level)
+      delay(10);
+    }
   }
 }
 
