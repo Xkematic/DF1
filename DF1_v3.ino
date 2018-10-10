@@ -7,7 +7,7 @@
 
 //Constant
 #define MAXNUMBERITERACALIBRA 100 // Iteration to store parameter to aboid spurois peaks
-#define MAXUMBRALAC 3500 //limit to trigger LED ON by Ac force
+#define MAXUMBRALAC 4750 //limit to trigger LED ON by Ac force
 #define MAXUMBRALG 5000 //limit to trigger LED ON by giros force
 #define NUMBEROFTIMETOLEDONAc 10
 #define NUMBEROFTIMETOLEDONG 1
