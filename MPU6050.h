@@ -10,13 +10,13 @@
 class MPU6050
 {
   public:
-	MPU6050(int MPU_addr); // Constructor
-	void MPU6050_ReadData(int16_t *AcX,int16_t *AcY,int16_t *AcZ,int16_t *Tmp,int16_t *GyX,int16_t *GyY,int16_t *GyZ,int MPU_addr);
-	void MPU6050_ShowDataSerial(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int idelay);
+	MPU6050(int addr); // Constructor
+	bool begin(void);
+	void ReadData(int16_t *AcX,int16_t *AcY,int16_t *AcZ,int16_t *Tmp,int16_t *GyX,int16_t *GyY,int16_t *GyZ);
+	void ShowDataSerial(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int idelay);
+	bool releaseBus;
   private:
-    
+    int MPU_addr;
 };
-  //MPU6050_1.ReadingDataMPU6050(&AcX, &AcY, &AcZ, &Tmp, &GyX, &GyY, &GyZ);
-  //MPU6050_1.ShowDataUSBlog(&AcX, &AcY, &AcZ, &Tmp, &GyX, &GyY, &GyZ);
-
+  
 #endif

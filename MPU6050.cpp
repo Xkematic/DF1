@@ -4,7 +4,7 @@
   Released into the public domain under Creative Common License.
 */
 
-  #include "Arduino.h"
+ // #include "Arduino.h"
   #include "MPU6050.h"
   #include<Wire.h> //allows communication between MPU6050 and STm32 by ISP  
 
@@ -12,22 +12,29 @@
 
 /************************************************************************************/
 // MPU6050_Constructor
+/************************************************************************************/
+MPU6050::MPU6050(int addr){
+	MPU_addr = addr;
+}
+
+/************************************************************************************/
+// MPU6050_begin
 // Input parameter:
 //    MPU_addr -> address to make the pipe to communicate between MPU6050 and STM32
 // Output parameter:
-//    NONE
-/************************************************************************************/
-MPU6050::MPU6050(int MPU_addr){
+//    return 0 if no error
+bool MPU6050::begin(void){
   Wire.begin(); // initiate i2c system
   Wire.beginTransmission(MPU_addr); // be sure we talk to our MPU vs some other device
   Wire.write(0x6B);  // PWR_MGMT_1 register
   Wire.write(0);     // set to zero (wakes up the MPU-6050)
-  Wire.endTransmission(true); // done talking over to MPU device, for the moment
+  return Wire.endTransmission(true); // done talking over to MPU device, for the moment  
 }
+
 
 /************************************************************************************/
 // MPU6050_ReadData
-// Input parameter:
+// Input parameter: 
 //    MPU_addr -> address to make the pipe to communicate between MPU6050 and STM32
 // Output parameter:
 //    AcX -> Read and Store acceleration of X
@@ -37,11 +44,14 @@ MPU6050::MPU6050(int MPU_addr){
 //    GyX -> Read and Store Gyroscope values of X
 //    GyY -> Read and Store Gyroscope values of Y
 //    GyZ -> Read and Store Gyroscope values of Z
+// Return:
+//    0 if no error, otherwise higher than 0
 /************************************************************************************/
-void MPU6050::MPU6050_ReadData(int16_t *AcX,int16_t *AcY,int16_t *AcZ,int16_t *Tmp,int16_t *GyX,int16_t *GyY,int16_t *GyZ,int MPU_addr){
+void MPU6050::ReadData(int16_t *AcX,int16_t *AcY,int16_t *AcZ,int16_t *Tmp,int16_t *GyX,int16_t *GyY,int16_t *GyZ){
   Wire.beginTransmission(MPU_addr); // get ready to talk to MPU again
-  Wire.write(0x3B);  // starting with register 0x3B (ACCEL_XOUT_H)
-  Wire.endTransmission(false); // done talking to MPU for the time being
+  // starting with register 0x3B (ACCEL_XOUT_H)
+  Wire.write(0x3B);
+  Wire.endTransmission(true); // done talking to MPU for the time being
   Wire.requestFrom(MPU_addr,14);  // request a total of 14 registers
   // all the fancy <<8| stuff is to bit shift the first 8 bits to
   // the left & combine it with the next 8 bits to form 16 bits
@@ -70,7 +80,7 @@ void MPU6050::MPU6050_ReadData(int16_t *AcX,int16_t *AcY,int16_t *AcZ,int16_t *T
 // Output parameter:
 //    NONE
 /************************************************************************************/
-void MPU6050::MPU6050_ShowDataSerial(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int idelay){
+void MPU6050::ShowDataSerial(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int idelay){
   Serial.print("AcX = "); Serial.print(AcX); // share accellerometer values over debug channel 
   Serial.print(" | AcY = "); Serial.print(AcY);
   Serial.print(" | AcZ = "); Serial.print(AcZ);
