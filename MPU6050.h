@@ -13,7 +13,9 @@ class MPU6050
 	MPU6050(int addr); // Constructor
 	bool begin(void);
 	void ReadData(int16_t *AcX,int16_t *AcY,int16_t *AcZ,int16_t *Tmp,int16_t *GyX,int16_t *GyY,int16_t *GyZ);
-	void ShowDataSerial(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int idelay);
+	void ShowDataSerial(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int idelay, int iLED);
+	void TriggerSTOP(bool iTrigger);
+	bool ProcessingSignalforSTOP(int16_t AcX_ARRAY[], int iMAXNUMBERDATAPROCESSING);
 	bool releaseBus;
   private:
     int MPU_addr;
