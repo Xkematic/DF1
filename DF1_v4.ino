@@ -1,12 +1,14 @@
 //Libraries
 #include <MPU6050.h> // MPU Library
 //#include<Wire.h> //allows communication between MPU6050 and STm32 by ISP  
-//Define
-#define NUMBEROFTIMETOLEDONAc 10 // Number of time to send signal output
+
 //Constant
 const int MPU_addr=0x68;  // I2C address of the MPU-6050
-const int chipSelect = 25; // STM32 pin into olimexino 
-const int OutPinSignal =  0;      // the number of the LED pin to send signal to speaker/LED_Board
+const int chipSelect = 25; // STM32 pin into olimexino
+const int MAXTOAVOIDOVERFLOW = 32500; // to avoid overflow to walk in array
+const int INITARRAY = 0; // first position of any ARRAY in Arduino
+const int MAXNUMBERDATAPROCESSING = 10; //maximum number of data to process
+const int FREQSAMPLE = 25;  //to control frequency sample
 
 /************************SD CARD****************************/
 #define DEBUG_TO_SD    // Controls if we are gonna store data in SD
@@ -24,6 +26,8 @@ int buttonState = 0;        // variable for reading the pushbutton status
 /************************SD CARD****************************/
 
 //Variables
+int iContArray=0; // to walk into array AcX_Array.
+int16_t AcX_ARRAY[10]= {0,0,0,0,0,0,0,0,0,0}; // for storing and processing data
 
 //Creating a class MPU
 MPU6050 myMPU(MPU_addr); // This will apply once MPU6050 is defined.
@@ -32,7 +36,7 @@ void setup() {
   if (myMPU.begin())
     Serial.println("Error initializing MPU");
 
-  #ifdef DEBUG_TO_SD
+    #ifdef DEBUG_TO_SD
 //    InitCardSD();
     // initialize the LED pin as an output:
     pinMode(ledPin, OUTPUT);
@@ -56,26 +60,37 @@ void setup() {
     dataFile.close();
     pinMode(0, OUTPUT); // Activation PIN for triggering speaker 
   #endif
-
-  // initialize the OutPinSignal as an output:
-    pinMode(OutPinSignal, OUTPUT);
-    TriggerSTOP();
+    myMPU.TriggerSTOP(true); //Checking for LED
 }
 
 void loop() {
   int16_t AcX=0,AcY=0,AcZ=0,Tmp=0,GyX=0,GyY=0,GyZ=0; // declare accellerometer and gyro variables TWO Bytes each
   int idelay = 333; //in milliseconds. It is the time to stop after shown data by serial data.
+  long tinitial=0; //to control frequency sample
 
   #ifdef DEBUG_TO_SD
     char cadena[250];
     int LedOn = -1;
   #endif
-  
-  //while (!Serial.available()) continue;// Wait for the user to press a key
+
+  tinitial=millis();//to control frequency sample
   myMPU.ReadData(&AcX, &AcY, &AcZ, &Tmp, &GyX, &GyY, &GyZ);
   #ifndef DEBUG_TO_SD
-    myMPU.ShowDataSerial(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ, idelay);
+    myMPU.ShowDataSerial(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ, idelay, LedOn);
   #endif
+  AcX_ARRAY[iContArray%MAXNUMBERDATAPROCESSING]=AcX;//ESTO ESTA MAL HAY QUE DESPLAZAR LOS VALORES 
+  //Serial.print("iContArray = "); Serial.println(iContArray); // share accellerometer values over debug channel 
+  //Serial.print("MAXNUMBERDATAPROCESSING = "); Serial.println(MAXNUMBERDATAPROCESSING); // share accellerometer values over debug channel 
+  //Serial.print("iContArray%MAXNUMBERDATAPROCESSING = "); Serial.println(iContArray%MAXNUMBERDATAPROCESSING); // share accellerometer values over debug channel 
+  //delay(500);
+  if (myMPU.ProcessingSignalforSTOP(AcX_ARRAY, MAXNUMBERDATAPROCESSING)){
+    myMPU.TriggerSTOP(true);
+    LedOn = 0;
+    #ifndef DEBUG_TO_SD
+      myMPU.ShowDataSerial(AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ, idelay, LedOn);
+    #endif  
+    AcX_ARRAY[0] = 0;AcX_ARRAY[1] = 0;AcX_ARRAY[2] = 0;AcX_ARRAY[3] = 0;AcX_ARRAY[4] = 0;AcX_ARRAY[5] = 0;AcX_ARRAY[6] = 0;AcX_ARRAY[7] = 0;AcX_ARRAY[8] = 0;AcX_ARRAY[9] = 0;//,0,0,0,0,0,0,0,0,0};
+  }
   #ifdef DEBUG_TO_SD
     sprintf(cadena,"P = %d | AcX = %d | AcY = %d | AcZ = %d | TMP = %.2f | GyX = %d | GyY = %d | GyZ = %d | LED? = %d", millis(), AcX, AcY, AcZ, Tmp/340.00+36.53, GyX, GyY, GyZ, LedOn);    
   /*RUTINA PARA ALMACENAR LOS DATOS EN LA SD CARD Y VISUALIZARLO POR EL PUERTO SERIE*//*SOLO PARA RECOGER DATOS NO AL PRODUCTO FINAL*/  
@@ -87,8 +102,8 @@ void loop() {
     /*END RUTINA PARA ALMACENAR LOS DATOS EN LA SD CARD Y VISUALIZARLO POR EL PUERTO SERIE*//*SOLO PARA RECOGER DATOS NO AL PRODUCTO FINAL*/    
   #endif
 
-    /*RUTINA PARA RESETEAR EL NOMBRE DEL FICHERO Y RESETEAR EL LED EL FICHERO DONDE SE VAN A GUARDAR LOS DATOS*//*SOLO PARA RECOGER DATOS NO AL PRODUCTO FINAL*/
-    #ifdef DEBUG_TO_SD
+  /*RUTINA PARA RESETEAR EL NOMBRE DEL FICHERO Y RESETEAR EL LED EL FICHERO DONDE SE VAN A GUARDAR LOS DATOS*//*SOLO PARA RECOGER DATOS NO AL PRODUCTO FINAL*/
+  #ifdef DEBUG_TO_SD
     previousMillis = millis();
     if (isButtonPressed()) {
       // If so, turn the LED from on to off, or from off to on:
@@ -101,19 +116,14 @@ void loop() {
       dataFile.close();
       //delay(5);
     }
-    #endif  
-}
+  #endif    
 
-//send signal to ON STOP to speaker for debugging
-void TriggerSTOP()
-{
-    for (int i=0; i<NUMBEROFTIMETOLEDONAc; i++)
-    {
-      digitalWrite(0, HIGH);   // turn the LED on (HIGH is the voltage level)
-      delay(1500);
-      digitalWrite(0, LOW);   // turn the LED on (HIGH is the voltage level)
-      delay(50);
-    }
+  // to control overflow of int i which is walking into array.
+  iContArray++;
+  if (iContArray/MAXNUMBERDATAPROCESSING == 1)
+    iContArray=INITARRAY;
+
+  while ((millis()-tinitial) < FREQSAMPLE); //to control frequency sample
 }
 
 // to test if button in pressed to update file where data is stored
