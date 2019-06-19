@@ -6,9 +6,13 @@
 
  // #include "Arduino.h"
   #include "MPU6050.h"
-  #include<Wire.h> //allows communication between MPU6050 and STm32 by ISP  
+  #include <Wire.h> //allows communication between MPU6050 and STm32 by ISP  
 
 // const int MPU_addr=0x68;  // I2C address of the MPU-6050
+//const int LIMITTOSTOP = -6750; // limit to trigger STOP signal, under this value STOP will blink.
+const int LIMITTOSTOP = 6800; // limit to trigger STOP signal, under this value STOP will blink.
+const int NUMBEROFTIMETOLEDONAc = 9; //number of time to blink
+const int OutPinSignal =  0;      // the number of the LED pin to send signal to speaker/LED_Board
 
 /************************************************************************************/
 // MPU6050_Constructor
@@ -67,6 +71,54 @@ void MPU6050::ReadData(int16_t *AcX,int16_t *AcY,int16_t *AcZ,int16_t *Tmp,int16
 }
 
 /************************************************************************************/
+// TriggerSTOP
+// Input parameter: 
+//    iTrigger -> if TRUE then STOP shall blink
+// Output parameter:
+//		NONE
+// Return:
+//    0 if no error, otherwise higher than 0
+/************************************************************************************/
+void MPU6050::TriggerSTOP(bool iTrigger){
+	
+	if (iTrigger){
+		for (int i=0; i<NUMBEROFTIMETOLEDONAc; i++)
+		{
+			digitalWrite(PA1, HIGH);   // turn the LED on (HIGH is the voltage level)
+			delay(180);
+			digitalWrite(PA1, LOW);   // turn the LED on (HIGH is the voltage level)
+			delay(160);
+		}
+	}
+}
+
+/************************************************************************************/
+// ProcessingSignalforSTOP
+// Input parameter: 
+//    AcX_Array -> Array where micro is storing aceleretation of MPU
+//	  iMAXNUMBERDATAPROCESSING -> maximum number of data to be processed
+// Output parameter:
+//    NONE
+// Return:
+//    false no trigger STOP no value under limit, otherwise true and trigger signal
+/************************************************************************************/
+bool MPU6050::ProcessingSignalforSTOP(long AcX_ARRAY[], int iMAXNUMBERDATAPROCESSING){
+	long int iResult = 0;
+	for (int i=0;i<iMAXNUMBERDATAPROCESSING;i++){
+		iResult = iResult + abs(AcX_ARRAY[i]);
+		//Serial.print("iResult = "); Serial.println(iResult); // share accellerometer values over debug channel 
+		//Serial.print("AcX_ARRAY[i] = "); Serial.println(AcX_ARRAY[i]); // share accellerometer values over debug channel 
+	}
+	//delay(500);
+	
+	//if ((iResult/iMAXNUMBERDATAPROCESSING) < LIMITTOSTOP)
+	if ((iResult/iMAXNUMBERDATAPROCESSING) >= LIMITTOSTOP)
+		return true;
+	else
+		return false;
+}
+
+/************************************************************************************/
 // MPU6050_ShowDataSerial
 // Input parameter:
 //    idelay -> in milliseconds. It is the time to stop after shown data by serial data.
@@ -80,13 +132,14 @@ void MPU6050::ReadData(int16_t *AcX,int16_t *AcY,int16_t *AcZ,int16_t *Tmp,int16
 // Output parameter:
 //    NONE
 /************************************************************************************/
-void MPU6050::ShowDataSerial(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int idelay){
+void MPU6050::ShowDataSerial(int16_t AcX,int16_t AcY,int16_t AcZ,int16_t Tmp,int16_t GyX,int16_t GyY,int16_t GyZ,int idelay, int iLED){
   Serial.print("AcX = "); Serial.print(AcX); // share accellerometer values over debug channel 
   Serial.print(" | AcY = "); Serial.print(AcY);
   Serial.print(" | AcZ = "); Serial.print(AcZ);
   Serial.print(" | Tmp = "); Serial.print(Tmp/340.00+36.53);  //equation for temperature in degrees C from datasheet
   Serial.print(" | GyX = "); Serial.print(GyX); // share gyroscope values over debug channel
   Serial.print(" | GyY = "); Serial.print(GyY);
-  Serial.print(" | GyZ = "); Serial.println(GyZ);
-  delay(idelay); // delay a bit to not overwhelm you the user/programmer as you view the results
+  Serial.print(" | GyZ = "); Serial.print(GyZ);
+  Serial.print(" | LED = "); Serial.println(iLED);
+  //delay(idelay); // delay a bit to not overwhelm you the user/programmer as you view the results
 }
